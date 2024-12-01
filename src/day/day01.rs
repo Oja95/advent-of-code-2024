@@ -1,6 +1,7 @@
 use crate::day::utils;
 use core::fmt;
 use std::collections::HashMap;
+use itertools::Itertools;
 
 pub fn run() {
     let input_string = utils::read_input(1);
@@ -13,23 +14,9 @@ pub fn run() {
 fn run_part_one(input_string: &str) -> u64 {
     let input_pairs = input_to_pairs(&input_string);
 
-    let mut first_reserachers_list: Vec<u64> = input_pairs.iter()
-        .map(|input_pair| input_pair.first)
-        .collect::<Vec<_>>();
-    first_reserachers_list.sort();
-
-    let mut second_reserachers_list: Vec<u64> = input_pairs.into_iter()
-        .map(|input_pair| input_pair.second)
-        .collect::<Vec<_>>();
-    second_reserachers_list.sort();
-
-    if first_reserachers_list.len() != second_reserachers_list.len() {
-        panic!("Expected the two list to be equal in size!");
-    }
-
-    first_reserachers_list.iter()
-        .zip(second_reserachers_list.iter())
-        .map(|(first, second)| first.abs_diff(*second))
+    input_pairs.iter().map(|input_pair| input_pair.first).sorted()
+        .zip(input_pairs.iter().map(|input_pair| input_pair.second).sorted())
+        .map(|(first, second)| first.abs_diff(second))
         .sum()
 }
 
