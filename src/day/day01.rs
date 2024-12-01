@@ -1,16 +1,17 @@
 use crate::day::utils;
 use core::fmt;
+use std::collections::HashMap;
 
 pub fn run() {
     let input_string = utils::read_input(1);
-    let i = run_part_one(input_string);
-    println!("{}", i);
+    let part_one_result = run_part_one(&input_string);
+    println!("{}", part_one_result);
+    let part_two_result = run_part_two(&input_string);
+    println!("{}", part_two_result);
 }
 
-fn run_part_one(input_string: String) -> u64 {
-    let input_pairs: Vec<InputPair> = input_string.lines()
-        .map(|line| parse_line(line).unwrap())
-        .collect();
+fn run_part_one(input_string: &str) -> u64 {
+    let input_pairs = input_to_pairs(&input_string);
 
     let mut first_reserachers_list: Vec<u64> = input_pairs.iter()
         .map(|input_pair| input_pair.first)
@@ -26,12 +27,41 @@ fn run_part_one(input_string: String) -> u64 {
         panic!("Expected the two list to be equal in size!");
     }
 
-    let mut id_diffs = Vec::new();
-    for i in 0..first_reserachers_list.len() {
-        id_diffs.push(first_reserachers_list[i].abs_diff(second_reserachers_list[i]));
+    first_reserachers_list.iter()
+        .zip(second_reserachers_list.iter())
+        .map(|(first, second)| first.abs_diff(*second))
+        .sum()
+}
+
+fn run_part_two(input_string: &str) -> u64 {
+    let input_pairs = input_to_pairs(&input_string);
+
+    let second_researchers_locations_list: Vec<u64> = input_pairs.iter()
+        .map(|input_pair| input_pair.second)
+        .collect();
+
+    let mut second_researcher_location_counts = HashMap::new();
+    for location_id in second_researchers_locations_list {
+        let x = second_researcher_location_counts.get(&location_id).unwrap_or_else(|| &0);
+        second_researcher_location_counts.insert(location_id, x + 1);
     }
 
-    id_diffs.iter().sum()
+    let mut similarity_score = 0;
+
+    input_pairs.iter()
+        .map(|input_pair| input_pair.first)
+        .for_each(|first| {
+            let first_occurrences_in_second = second_researcher_location_counts.get(&first).unwrap_or_else(|| &0);
+            similarity_score += first * first_occurrences_in_second;
+        });
+
+    similarity_score
+}
+
+fn input_to_pairs(input_string: &str) -> Vec<InputPair> {
+    input_string.lines()
+        .map(|line| parse_line(line).unwrap())
+        .collect()
 }
 
 fn parse_line(input: &str) -> Option<InputPair> {
@@ -55,7 +85,7 @@ impl fmt::Display for InputPair {
 
 #[cfg(test)]
 mod tests {
-    use crate::day::day01::run_part_one;
+    use crate::day::day01::{run_part_one, run_part_two};
     use crate::day::utils;
 
     fn example_input() -> String {
@@ -70,11 +100,21 @@ mod tests {
 
     #[test]
     fn test_exercise_example_part_one() {
-        assert_eq!(run_part_one(example_input()), 11);
+        assert_eq!(run_part_one(&example_input()), 11);
     }
 
     #[test]
     fn test_day1_input_part_one() {
-        assert_eq!(run_part_one(utils::read_input(1)), 1938424);
+        assert_eq!(run_part_one(&utils::read_input(1)), 1938424);
+    }
+
+    #[test]
+    fn test_exercise_example_part_two() {
+        assert_eq!(run_part_two(&example_input()), 31);
+    }
+
+    #[test]
+    fn test_day1_input_part_two() {
+        assert_eq!(run_part_two(&utils::read_input(1)), 22014209);
     }
 }
