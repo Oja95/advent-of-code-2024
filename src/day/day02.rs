@@ -47,28 +47,26 @@ fn is_safe(report: &Vec<usize>) -> bool {
         Direction::Ascending
     };
 
-    let mut result = true;
-
     for index in 1..report.len() {
         let previous_elem = report[index - 1];
         let current_elem = report[index];
         if direction == Direction::Ascending {
             if previous_elem > current_elem {
-                result = false;
+                return false;
             }
         } else {
             if previous_elem < current_elem {
-                result = false;
+                return false;
             }
         }
 
         let diff = previous_elem.abs_diff(current_elem);
         if diff > 3 || diff < 1 {
-            result = false;
+            return false;
         }
     }
 
-    result
+    true
 }
 
 #[derive(PartialEq)]
