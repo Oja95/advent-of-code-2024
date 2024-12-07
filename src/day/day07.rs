@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use itertools::Itertools;
 use crate::day::utils;
 
@@ -67,11 +68,15 @@ fn _produce_combinations(size: usize, with_concat: bool, accumulator: Vec<Operat
 
 fn run_calibration_check(calibration_inputs: Vec<Calibration>, with_concat: bool) -> u64 {
     let mut sum = 0;
+    let mut operator_combinations_map = HashMap::new();
 
     for calibration_input in calibration_inputs {
         let operators_count = calibration_input.operands.len() - 1;
+        let operator_combinations = operator_combinations_map
+            .entry(operators_count)
+            .or_insert_with_key(|count| produce_combinations(*count, with_concat));
 
-        for operator_combination in produce_combinations(operators_count, with_concat) {
+        for operator_combination in operator_combinations {
             let mut combination_iterator = operator_combination.iter();
             let combination_total = calibration_input.operands.iter()
                 .skip(1)
