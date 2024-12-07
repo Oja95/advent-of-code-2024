@@ -1,5 +1,4 @@
 use std::collections::{HashSet};
-use std::ops::{Deref, Index};
 use indexmap::IndexSet;
 use itertools::Itertools;
 use crate::day::utils;

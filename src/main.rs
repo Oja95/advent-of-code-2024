@@ -5,7 +5,7 @@ mod day;
 fn main() {
     let day_to_run = std::env::args()
         .nth(1)
-        .unwrap_or_else(|| "6".to_string());
+        .unwrap_or_else(|| "1".to_string());
 
     match day_to_run.as_str() {
         "1" => day01::run(),
@@ -14,6 +14,7 @@ fn main() {
         "4" => day04::run(),
         "5" => day05::run(),
         "6" => day06::run(),
+        "7" => day07::run(),
         _ => println!("Day not implemented!"),
     }
 }
