@@ -42,14 +42,9 @@ fn run_part_one(input_string: &str) -> usize {
 }
 
 fn calculate_checksum(memory: &mut Vec<isize>) -> usize {
-    let mut checksum = 0;
-    for (index, block) in memory.iter().enumerate() {
-        if *block == -1 {
-            continue;
-        }
-        checksum += index * *block as usize;
-    }
-    checksum
+    memory.iter().enumerate()
+        .filter(|(_, value)| **value != -1)
+        .fold(0, |acc, (index, block)| acc + index * *block as usize)
 }
 
 fn parse_memory(input_string: &str) -> Vec<isize> {
@@ -122,7 +117,6 @@ fn run_part_two(input_string: &str) -> usize {
             if empty_space_length >= file_length {
                 break;
             } else if start_index >= memory.len() {
-                start_index = 0;
                 end_index -= file_length;
                 file_length = 0;
                 break;
@@ -130,12 +124,9 @@ fn run_part_two(input_string: &str) -> usize {
                 start_index += empty_space_length;
             }
         }
-        // found empty pos at start that fits end
+        // found empty pos at start that fits end?
 
-        if end_index == 0 {
-            break;
-        }
-
+        // only swap if it isn't moved forward in the memory
         if end_index < start_index {
             if file_length > end_index {
                 break;
@@ -144,7 +135,7 @@ fn run_part_two(input_string: &str) -> usize {
             continue;
         }
 
-        // need to swap file length amount of places
+        // swap file length amount of blocks
         for i in 0..file_length {
             memory.swap(start_index + i, end_index - i);
         }
