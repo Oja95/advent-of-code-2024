@@ -1,6 +1,5 @@
-use std::collections::{HashMap, HashSet, VecDeque};
-use std::ops::Index;
-use glam::{IVec2, UVec2};
+use std::collections::VecDeque;
+use glam::IVec2;
 use itertools::Itertools;
 use crate::day::utils;
 use crate::day::utils::Matrix;
@@ -29,7 +28,7 @@ fn run_part_one(input_string: &str) -> usize {
     let mut regions = Vec::new();
 
     for (y, row) in matrix.iter().enumerate() {
-        for (x, elem) in row.iter().enumerate() {
+        for (x, _) in row.iter().enumerate() {
 
             if !visited[y][x] {
                 let mut section_area = 0;
@@ -85,7 +84,7 @@ fn run_part_two(input_string: &str) -> usize {
     //   -> Vec<(usize, Vec<(IVec2,IVec2)>)>
 
     for (y, row) in matrix.iter().enumerate() {
-        for (x, elem) in row.iter().enumerate() {
+        for (x, _) in row.iter().enumerate() {
 
             if !visited[y][x] {
                 let mut section_area = 0;
@@ -141,8 +140,8 @@ fn run_part_two(input_string: &str) -> usize {
 
             // find all matching positions horizontally with same delta
             let adjacent_perimeters = perimeter_sections.iter().enumerate()
-                .filter(|(j, elem)| elem.1 == current.1)
-                .filter(|(j, elem)| {
+                .filter(|(_, elem)| elem.1 == current.1)
+                .filter(|(_, elem)| {
                     if is_horizontal_fence {
                         elem.0.y == current.0.y
                     } else {
