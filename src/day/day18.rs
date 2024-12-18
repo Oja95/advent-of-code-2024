@@ -1,6 +1,5 @@
 use crate::day::utils;
-use glam::{quat, IVec2};
-use itertools::Itertools;
+use glam::IVec2;
 use std::collections::VecDeque;
 
 pub fn run() {
@@ -40,7 +39,6 @@ fn run_part_one(input_string: &str, grid_size: usize, max_bytes: usize) -> usize
     let mut deque = VecDeque::new();
     deque.push_back((start_pos, 0));
     visited[0][0] = true;
-
 
     while let Some((current_pos, steps)) = deque.pop_front() {
 
