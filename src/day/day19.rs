@@ -1,6 +1,5 @@
 use crate::day::utils;
-use glam::IVec2;
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 
 pub fn run() {
     let input_string = utils::read_input(19);
@@ -8,81 +7,36 @@ pub fn run() {
     println!("{}", run_part_two(&input_string));
 }
 
-fn run_part_one(input_string: &str) -> usize {
+fn get_input(input_string: &str) -> (Vec<&str>, Vec<&str>) {
     let mut lines = input_string.lines();
     let segments = lines.next().unwrap().split(", ").collect::<Vec<&str>>();
-    println!("{:?}", segments);
     lines.next();
 
     let mut towels = vec![];
     while let Some(line) = lines.next() {
         towels.push(line);
     }
-
-    let mut dp = HashMap::new();
-    let mut possible = 0;
-    for towel in &towels {
-        let can_combine = check_towel(*towel, &segments, &mut dp);
-        if can_combine {
-            possible += 1;
-        }
-    }
-
-    possible
+    (segments, towels)
 }
 
-fn check_towel<'a>(towel_pattern: &'a str, segments: &Vec<&str>, dp: &mut HashMap<&'a str, bool>) -> bool {
-    // println!("{:?}", dp);
-    if let Some(value) = dp.get(towel_pattern) {
-        return *value;
-    }
+fn run_part_one(input_string: &str) -> usize {
+    let (segments, towels) = get_input(input_string);
 
-    if towel_pattern == "" {
-        return true;
-    }
-
-    for segment in segments {
-        if towel_pattern.starts_with(segment) {
-            let new = towel_pattern.strip_prefix(segment).unwrap();
-            // println!("towel pat {}", towel_pattern);
-            // println!("segment {:?}", segments);
-            // println!("new {}", new);
-            let can_build = check_towel(new, segments, dp);
-            if can_build {
-                dp.insert(towel_pattern, true);
-                return true;
-            }
-        }
-    }
-
-    dp.insert(towel_pattern, false);
-    false
-
+    towels.iter()
+        .map(|towel| towel_combinations(*towel, &segments, &mut HashMap::new()))
+        .filter(|combinations| *combinations > 0)
+        .count()
 }
 
 fn run_part_two(input_string: &str) -> usize {
-    let mut lines = input_string.lines();
-    let segments = lines.next().unwrap().split(", ").collect::<Vec<&str>>();
-    println!("{:?}", segments);
-    lines.next();
+    let (segments, towels) = get_input(input_string);
 
-    let mut towels = vec![];
-    while let Some(line) = lines.next() {
-        towels.push(line);
-    }
-
-    let mut dp = HashMap::new();
-    let mut possible_combinations = 0;
-    for towel in &towels {
-        println!("{:?}", towel);
-        possible_combinations += check_towel_2(*towel, &segments, &mut dp);
-    }
-
-    possible_combinations
+    towels.iter()
+        .map(|towel| towel_combinations(*towel, &segments, &mut HashMap::new()))
+        .sum()
 }
 
-fn check_towel_2<'a>(towel_pattern: &'a str, segments: &Vec<&str>, dp: &mut HashMap<&'a str, usize>) -> usize {
-    // println!("{:?}", dp);
+fn towel_combinations<'a>(towel_pattern: &'a str, segments: &Vec<&str>, dp: &mut HashMap<&'a str, usize>) -> usize {
     if let Some(value) = dp.get(towel_pattern) {
         return *value;
     }
@@ -92,21 +46,17 @@ fn check_towel_2<'a>(towel_pattern: &'a str, segments: &Vec<&str>, dp: &mut Hash
     }
 
     let mut patterns_count = 0;
-
     for segment in segments {
         if towel_pattern.starts_with(segment) {
-            let new = towel_pattern.strip_prefix(segment).unwrap();
-            let new_count = check_towel_2(new, segments, dp);
-            dp.insert(new, new_count);
-            patterns_count += new_count;
+            let sub_pattern = towel_pattern.strip_prefix(segment).unwrap();
+            let sub_pattern_combinations_count = towel_combinations(sub_pattern, segments, dp);
+            dp.insert(sub_pattern, sub_pattern_combinations_count);
+            patterns_count += sub_pattern_combinations_count;
         }
     }
 
     dp.insert(towel_pattern, patterns_count);
     patterns_count
-
-    // dp.insert(towel_pattern, patterns_count);
-    // patterns_count
 }
 
 #[cfg(test)]
@@ -145,7 +95,7 @@ bbrgwb")
 
     #[test]
     fn test_input_part_two() {
-        assert_eq!(run_part_two(&utils::read_input(19)), 1495455);
+        assert_eq!(run_part_two(&utils::read_input(19)), 571894474468161);
     }
 
 }
