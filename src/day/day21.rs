@@ -2,7 +2,6 @@ use crate::day::utils;
 use glam::IVec2;
 use itertools::Itertools;
 use std::collections::{HashMap, VecDeque};
-use std::env::var;
 
 pub fn run() {
     let input_string = utils::read_input(21);
@@ -68,10 +67,6 @@ fn find_all_shortest_paths(start_pos: IVec2, end_pos: IVec2, grid: &[&[char]]) -
     result
 }
 
-fn run_part_one(input_string: &str) -> usize {
-    run_simulation(input_string, 2)
-}
-
 fn run_simulation(input_string: &str, robot_layers: usize) -> usize {
     let direction_map: HashMap<IVec2, char> = [
         (IVec2::new(1, 0), '>'),
@@ -80,8 +75,8 @@ fn run_simulation(input_string: &str, robot_layers: usize) -> usize {
         (IVec2::new(0, -1), '^'),
     ].iter().cloned().collect();
 
-    // Map (bot layer, from, to) -> no_of_instructions
-    let mut dp: HashMap<(usize, char, char), usize> = HashMap::new();
+    // Map (bot layer, from, to) -> No. of instructions produced
+    let mut memo: HashMap<(usize, char, char), usize> = HashMap::new();
 
     let input_lines = input_string.lines().collect_vec();
     let mut result = 0;
@@ -108,15 +103,8 @@ fn run_simulation(input_string: &str, robot_layers: usize) -> usize {
             let mut shortest_sub_list_len = usize::MAX;
 
             for shortest_path in shortest_paths {
-                let mut directions = Vec::new();
-                for i in 1..shortest_path.len() {
-                    let delta = shortest_path[i] - shortest_path[i - 1];
-                    let direction = direction_map.get(&delta).unwrap();
-                    directions.push(*direction);
-                }
-                directions.push('A');
-
-                let result_len = solve(&direction_map, &dirpad_grid, &mut directions, robot_layers, &mut dp);
+                let directions = translate_coordinates_to_directions(&direction_map, &shortest_path);
+                let result_len = solve(&direction_map, &dirpad_grid, directions, robot_layers, &mut memo);
                 if result_len < shortest_sub_list_len {
                     shortest_sub_list_len = result_len;
                 }
@@ -126,17 +114,15 @@ fn run_simulation(input_string: &str, robot_layers: usize) -> usize {
             start_pos = target;
         }
 
-        let x2 = line.trim_end_matches('A');
-        println!("{}", x2.parse::<usize>().unwrap());
-        println!("{}", human_inserts_count);
-        result += human_inserts_count * x2.parse::<usize>().unwrap();
+        let input_numeric_part = line.trim_end_matches('A');
+        result += human_inserts_count * input_numeric_part.parse::<usize>().unwrap();
     });
 
     result
 }
 
-fn solve(direction_map: &HashMap<IVec2, char>, dirpad_grid: &&[&[char]], mut directions:
-&mut Vec<char>, robot_layers: usize, dp: &mut HashMap<(usize, char, char), usize>) -> usize {
+fn solve(direction_map: &HashMap<IVec2, char>, dirpad_grid: &&[&[char]], directions: Vec<char>,
+         robot_layers: usize, dp: &mut HashMap<(usize, char, char), usize>) -> usize {
     if robot_layers == 0 {
         return directions.len();
     }
@@ -144,40 +130,31 @@ fn solve(direction_map: &HashMap<IVec2, char>, dirpad_grid: &&[&[char]], mut dir
     let mut result = 0;
 
     let mut dirpad_pos = DIRPAD_START;
-    for shortest_path_direction in directions {
+    for next_direction in directions {
         let mut numpad_target = Default::default();
         DIRPAD.iter().enumerate()
             .for_each(|(y, row)|
                 row.iter().enumerate()
                     .for_each(|(x, char)| {
-                        if *char == *shortest_path_direction {
+                        if *char == next_direction {
                             numpad_target = IVec2::new(x as i32, y as i32);
                         }
                     }));
 
-        if let Some(value) = dp.get(&(robot_layers, dirpad_grid[dirpad_pos.y as usize][dirpad_pos.x as usize], *shortest_path_direction)) {
+        let current_direction = dirpad_grid[dirpad_pos.y as usize][dirpad_pos.x as usize];
+        if let Some(value) = dp.get(&(robot_layers, current_direction, next_direction)) {
             result += value;
+        } else {
+            let direction_pad_shortest_paths = find_all_shortest_paths(dirpad_pos, numpad_target, &dirpad_grid);
 
-            dirpad_pos = numpad_target;
-            continue;
+            let shortest_directions = direction_pad_shortest_paths.iter()
+                .map(|directions_candidate| translate_coordinates_to_directions(&direction_map, directions_candidate))
+                .map(|directions_candidate| solve(direction_map, dirpad_grid, directions_candidate, robot_layers - 1, dp))
+                .min().unwrap();
+
+            dp.insert((robot_layers, current_direction, next_direction), shortest_directions);
+            result += shortest_directions;
         }
-
-        let direction_pad_shortest_paths = find_all_shortest_paths(dirpad_pos, numpad_target, &dirpad_grid);
-        // let x1 = direction_pad_shortest_paths.iter()
-        //     .min_by(|x, y|
-        //         coords_to_path(&direction_map, x).len().cmp(&coords_to_path(&direction_map, y).len())).unwrap();
-
-        let x1 = direction_pad_shortest_paths.iter()
-            .map(|x| coords_to_path(&direction_map, x))
-            .map(|mut x| solve(direction_map, dirpad_grid, &mut x, robot_layers - 1, dp))
-            .min().unwrap();
-
-        // let mut new_path = coords_to_path(&direction_map, x1);
-
-        // let subcalc = solve(direction_map, dirpad_grid, &mut new_path, robot_layers - 1, dp);
-        dp.insert((robot_layers, dirpad_grid[dirpad_pos.y as usize][dirpad_pos.x as usize],
-                   *shortest_path_direction), x1);
-        result += x1;
 
         dirpad_pos = numpad_target;
     }
@@ -185,23 +162,24 @@ fn solve(direction_map: &HashMap<IVec2, char>, dirpad_grid: &&[&[char]], mut dir
     result
 }
 
-fn coords_to_path(direction_map: &HashMap<IVec2, char>, vec2: &Vec<IVec2>) -> Vec<char> {
-    if vec2.len() == 1 {
-        return vec!['A'];
-    }
+fn translate_coordinates_to_directions(direction_delta_map: &HashMap<IVec2, char>, vec2: &Vec<IVec2>) -> Vec<char> {
     let mut second_robot_directions = Vec::new();
     for i in 1..vec2.len() {
-        let new_delta = vec2[i] - vec2[i - 1];
-        let new_direction;
-        if new_delta == IVec2::new(0, 0) {
-            new_direction = 'A';
+        let delta = vec2[i] - vec2[i - 1];
+        let direction;
+        if delta == IVec2::new(0, 0) {
+            direction = 'A';
         } else {
-            new_direction = *direction_map.get(&new_delta).unwrap();
+            direction = *direction_delta_map.get(&delta).unwrap();
         }
-        second_robot_directions.push(new_direction);
+        second_robot_directions.push(direction);
     }
     second_robot_directions.push('A');
     second_robot_directions
+}
+
+fn run_part_one(input_string: &str) -> usize {
+    run_simulation(input_string, 2)
 }
 
 fn run_part_two(input_string: &str) -> usize {
@@ -239,6 +217,6 @@ mod tests {
 
     #[test]
     fn test_input_part_two() {
-        assert_eq!(run_part_two(&utils::read_input(21)), 0);
+        assert_eq!(run_part_two(&utils::read_input(21)), 203640915832208);
     }
 }
