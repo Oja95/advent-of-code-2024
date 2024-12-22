@@ -2,6 +2,7 @@ use crate::day::utils;
 use glam::IVec2;
 use itertools::Itertools;
 use std::collections::{HashMap, VecDeque};
+use std::env::var;
 
 pub fn run() {
     let input_string = utils::read_input(21);
@@ -89,7 +90,6 @@ fn run_simulation(input_string: &str, robot_layers: usize) -> usize {
     let dirpad_grid: &[&[char]] = &DIRPAD.iter().map(|row| row.as_ref()).collect::<Vec<_>>();
 
     input_lines.iter().for_each(|line| {
-        let mut human_inserts = vec![];
         let mut human_inserts_count = 0;
         let mut start_pos = NUMPAD_START;
 
@@ -106,7 +106,6 @@ fn run_simulation(input_string: &str, robot_layers: usize) -> usize {
 
             let shortest_paths = find_all_shortest_paths(start_pos, target, numpad_grid);
             let mut shortest_sub_list_len = usize::MAX;
-            let mut shortest_sub_list = vec![];
 
             for shortest_path in shortest_paths {
                 let mut directions = Vec::new();
@@ -117,59 +116,79 @@ fn run_simulation(input_string: &str, robot_layers: usize) -> usize {
                 }
                 directions.push('A');
 
-                let mut cumulative_result = directions;
-                for _ in 0..robot_layers {
-                    let mut dirpad_pos = DIRPAD_START;
-
-                    let mut im_losing_it = Vec::new();
-                    for shortest_path_direction in cumulative_result {
-                        let mut numpad_target = Default::default();
-                        DIRPAD.iter().enumerate()
-                            .for_each(|(y, row)|
-                                row.iter().enumerate()
-                                    .for_each(|(x, char)| {
-                                        if *char == shortest_path_direction {
-                                            numpad_target = IVec2::new(x as i32, y as i32);
-                                        }
-                                    }));
-
-                        let direction_pad_shortest_paths = find_all_shortest_paths(dirpad_pos, numpad_target, &dirpad_grid);
-                        let x1 = direction_pad_shortest_paths.iter()
-                            .min_by(|x, y|
-                                coords_to_path(&direction_map, x).len().cmp(&coords_to_path(&direction_map, y).len())).unwrap();
-                        im_losing_it.push(x1.clone());
-                        dirpad_pos = numpad_target;
-                    }
-
-                    let vec2 = im_losing_it.into_iter().flatten().collect_vec();
-                    let second_robot_directions = coords_to_path(&direction_map, &vec2);
-
-                    cumulative_result = second_robot_directions;
-                }
-
-                if cumulative_result.len() < shortest_sub_list_len {
-                    shortest_sub_list = cumulative_result;
-                    shortest_sub_list_len = shortest_sub_list.len();
+                let result_len = solve(&direction_map, &dirpad_grid, &mut directions, robot_layers, &mut dp);
+                if result_len < shortest_sub_list_len {
+                    shortest_sub_list_len = result_len;
                 }
             }
 
-            human_inserts.append(&mut shortest_sub_list);
+            human_inserts_count += shortest_sub_list_len;
             start_pos = target;
         }
 
-        println!("{:?}", human_inserts);
-        println!("{:?}", human_inserts.len());
-        println!("{}", human_inserts.iter().join(""));
-
         let x2 = line.trim_end_matches('A');
         println!("{}", x2.parse::<usize>().unwrap());
-        result += human_inserts.len() * x2.parse::<usize>().unwrap();
+        println!("{}", human_inserts_count);
+        result += human_inserts_count * x2.parse::<usize>().unwrap();
     });
 
     result
 }
 
+fn solve(direction_map: &HashMap<IVec2, char>, dirpad_grid: &&[&[char]], mut directions:
+&mut Vec<char>, robot_layers: usize, dp: &mut HashMap<(usize, char, char), usize>) -> usize {
+    if robot_layers == 0 {
+        return directions.len();
+    }
+
+    let mut result = 0;
+
+    let mut dirpad_pos = DIRPAD_START;
+    for shortest_path_direction in directions {
+        let mut numpad_target = Default::default();
+        DIRPAD.iter().enumerate()
+            .for_each(|(y, row)|
+                row.iter().enumerate()
+                    .for_each(|(x, char)| {
+                        if *char == *shortest_path_direction {
+                            numpad_target = IVec2::new(x as i32, y as i32);
+                        }
+                    }));
+
+        if let Some(value) = dp.get(&(robot_layers, dirpad_grid[dirpad_pos.y as usize][dirpad_pos.x as usize], *shortest_path_direction)) {
+            result += value;
+
+            dirpad_pos = numpad_target;
+            continue;
+        }
+
+        let direction_pad_shortest_paths = find_all_shortest_paths(dirpad_pos, numpad_target, &dirpad_grid);
+        // let x1 = direction_pad_shortest_paths.iter()
+        //     .min_by(|x, y|
+        //         coords_to_path(&direction_map, x).len().cmp(&coords_to_path(&direction_map, y).len())).unwrap();
+
+        let x1 = direction_pad_shortest_paths.iter()
+            .map(|x| coords_to_path(&direction_map, x))
+            .map(|mut x| solve(direction_map, dirpad_grid, &mut x, robot_layers - 1, dp))
+            .min().unwrap();
+
+        // let mut new_path = coords_to_path(&direction_map, x1);
+
+        // let subcalc = solve(direction_map, dirpad_grid, &mut new_path, robot_layers - 1, dp);
+        dp.insert((robot_layers, dirpad_grid[dirpad_pos.y as usize][dirpad_pos.x as usize],
+                   *shortest_path_direction), x1);
+        result += x1;
+
+        dirpad_pos = numpad_target;
+    }
+
+    result
+}
+
 fn coords_to_path(direction_map: &HashMap<IVec2, char>, vec2: &Vec<IVec2>) -> Vec<char> {
+    if vec2.len() == 1 {
+        return vec!['A'];
+    }
     let mut second_robot_directions = Vec::new();
     for i in 1..vec2.len() {
         let new_delta = vec2[i] - vec2[i - 1];
@@ -200,8 +219,7 @@ mod tests {
 980A
 179A
 456A
-379A
-")
+379A")
     }
 
     #[test]
