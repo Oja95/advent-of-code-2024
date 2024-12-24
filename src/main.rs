@@ -31,6 +31,7 @@ fn main() {
         "21" => day21::run(),
         "22" => day22::run(),
         "23" => day23::run(),
+        "24" => day24::run(),
         _ => println!("Day not implemented!"),
     }
 }
