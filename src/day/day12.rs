@@ -302,6 +302,6 @@ AAAAAA")
 
     #[test]
     fn test_input_part_two() {
-        assert_eq!(run_part_two(&utils::read_input(12)), 1255);
+        assert_eq!(run_part_two(&utils::read_input(12)), 891106);
     }
 }

@@ -56,7 +56,7 @@ fn run_part_two(input_string: &str) -> i128 {
         let b: (i128, i128) = (caps[3].parse().unwrap(), caps[4].parse().unwrap());
         let target = (
             caps[5].parse::<i128>().unwrap() + 10000000000000,
-            caps[6].parse::<i128>().unwrap()+ 10000000000000
+            caps[6].parse::<i128>().unwrap() + 10000000000000
         );
         input.push((a, b, target));
     }
